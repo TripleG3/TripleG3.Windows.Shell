@@ -1,0 +1,87 @@
+name: Build & Publish NuGet
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+concurrency:
+  group: nuget-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  DOTNET_VERSION: 10.0.x
+  SOLUTION_PATH: TripleG3.Windows.Shell.sln
+  PROJECT_PATH: src/TripleG3.Windows.Shell/TripleG3.Windows.Shell.csproj
+  TEST_PROJECT_PATH: src/TripleG3.Windows.Shell.Tests/TripleG3.Windows.Shell.Tests.csproj
+  ARTIFACTS_PATH: artifacts
+
+jobs:
+  build-test-pack-publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore $env:SOLUTION_PATH
+
+      - name: Build release
+        run: dotnet build $env:SOLUTION_PATH -c Release --no-restore
+
+      - name: Test release
+        run: dotnet test $env:TEST_PROJECT_PATH -c Release --no-build --verbosity normal
+
+      - name: Pack
+        run: dotnet pack $env:PROJECT_PATH -c Release --no-build -o $env:ARTIFACTS_PATH
+
+      - name: Publish NuGet package
+        if: success()
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:NUGET_API_KEY)) {
+            Write-Host "NUGET_API_KEY secret not set; skipping publish."
+            exit 0
+          }
+
+          $packages = Get-ChildItem -Path $env:ARTIFACTS_PATH -Filter *.nupkg -File
+          foreach ($package in $packages) {
+            Write-Host "Publishing $($package.FullName)"
+            dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+
+          $symbolPackages = Get-ChildItem -Path $env:ARTIFACTS_PATH -Filter *.snupkg -File
+          foreach ($symbolPackage in $symbolPackages) {
+            Write-Host "Publishing symbols $($symbolPackage.FullName)"
+            dotnet nuget push $symbolPackage.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+          }
+
+      - name: Summary
+        if: always()
+        run: |
+          "## TripleG3.Windows.Shell Publish" >> $env:GITHUB_STEP_SUMMARY
+          "Commit: $env:GITHUB_SHA" >> $env:GITHUB_STEP_SUMMARY
+          "Package artifacts:" >> $env:GITHUB_STEP_SUMMARY
+
+          if (Test-Path $env:ARTIFACTS_PATH) {
+            Get-ChildItem -Path $env:ARTIFACTS_PATH -File | ForEach-Object { "- $($_.Name)" } >> $env:GITHUB_STEP_SUMMARY
+          }
+          else {
+            "- No artifacts directory was created." >> $env:GITHUB_STEP_SUMMARY
+          }
+
+    # Notes:
+    # - Set the repository or organization secret NUGET_API_KEY with a valid NuGet.org API key.
+    # - This workflow intentionally uses windows-latest because tests exercise real Windows DLLs.
+    # - Increment the package version before publishing a new release; existing versions are skipped.
