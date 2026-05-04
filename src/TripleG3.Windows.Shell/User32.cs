@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Text;
 
 namespace TripleG3.Windows.Shell;
@@ -17,7 +16,6 @@ namespace TripleG3.Windows.Shell;
 /// callers bind the exact delegate signature they need with <see cref="GetFunction{TDelegate}(string)" /> or
 /// <see cref="TryGetFunction{TDelegate}(string, out TDelegate?)" />.
 /// </remarks>
-[SupportedOSPlatform("windows")]
 public static class User32
 {
 	/// <summary>The canonical Windows module name for User32.</summary>
@@ -40,7 +38,6 @@ public static class User32
 	private static readonly ConcurrentDictionary<int, nint> s_ordinalExportCache = new();
 
 	/// <summary>Gets the loaded native module handle for <c>user32.dll</c>.</summary>
-	/// <exception cref="PlatformNotSupportedException">Thrown when called on a non-Windows operating system.</exception>
 	/// <exception cref="DllNotFoundException">Thrown when Windows cannot load <c>user32.dll</c>.</exception>
 	public static nint ModuleHandle => s_moduleHandle.Value;
 
@@ -189,11 +186,6 @@ public static class User32
 
 	private static nint LoadUser32()
 	{
-		if (!OperatingSystem.IsWindows())
-		{
-			throw new PlatformNotSupportedException($"{LibraryName} is only available on Windows.");
-		}
-
 		if (NativeLibrary.TryLoad(LibraryName, typeof(User32).Assembly, DllImportSearchPath.System32, out var handle))
 		{
 			return handle;
