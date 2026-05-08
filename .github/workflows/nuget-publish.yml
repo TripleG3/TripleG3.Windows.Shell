@@ -15,6 +15,7 @@ permissions:
 
 env:
   DOTNET_VERSION: 10.0.x
+  PACKAGE_ID: TripleG3.Windows.Shell
   SOLUTION_PATH: TripleG3.Windows.Shell.sln
   PROJECT_PATH: src/TripleG3.Windows.Shell/TripleG3.Windows.Shell.csproj
   TEST_PROJECT_PATH: src/TripleG3.Windows.Shell.Tests/TripleG3.Windows.Shell.Tests.csproj
@@ -33,17 +34,75 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Calculate next package version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $packageId = $env:PACKAGE_ID
+          $indexUrl = "https://api.nuget.org/v3-flatcontainer/$($packageId.ToLowerInvariant())/index.json"
+          $versions = @()
+
+          try {
+            $response = Invoke-RestMethod -Uri $indexUrl -Headers @{ 'Cache-Control' = 'no-cache' }
+            if ($response.versions) {
+              $versions = @($response.versions)
+            }
+          }
+          catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            if ($statusCode -ne 404) {
+              throw
+            }
+
+            Write-Host "Package $packageId has not been published yet; starting at 1.0.0."
+          }
+
+          $stableVersions = $versions |
+            Where-Object { $_ -match '^\d+\.\d+\.\d+(\.\d+)?$' } |
+            ForEach-Object { [Version]$_ } |
+            Sort-Object -Descending
+
+          if ($stableVersions.Count -eq 0) {
+            $latestVersion = $null
+            $nextVersion = '1.0.0'
+          }
+          else {
+            $latestVersion = $stableVersions[0]
+
+            if ($latestVersion.Revision -ge 0) {
+              $nextVersion = [Version]::new(
+                $latestVersion.Major,
+                $latestVersion.Minor,
+                $latestVersion.Build,
+                $latestVersion.Revision + 1).ToString()
+            }
+            else {
+              $nextVersion = [Version]::new(
+                $latestVersion.Major,
+                $latestVersion.Minor,
+                $latestVersion.Build + 1).ToString()
+            }
+          }
+
+          Write-Host "Latest NuGet.org version: $($latestVersion ?? 'none')"
+          Write-Host "Next package version: $nextVersion"
+
+          "PACKAGE_VERSION=$nextVersion" >> $env:GITHUB_ENV
+          "Latest NuGet.org version: $($latestVersion ?? 'none')" >> $env:GITHUB_STEP_SUMMARY
+          "Next package version: $nextVersion" >> $env:GITHUB_STEP_SUMMARY
+
       - name: Restore dependencies
         run: dotnet restore $env:SOLUTION_PATH
 
       - name: Build release
-        run: dotnet build $env:SOLUTION_PATH -c Release --no-restore
+        run: dotnet build $env:SOLUTION_PATH -c Release --no-restore -p:Version=$env:PACKAGE_VERSION -p:PackageVersion=$env:PACKAGE_VERSION
 
       - name: Test release
         run: dotnet test $env:TEST_PROJECT_PATH -c Release --no-build --verbosity normal
 
       - name: Pack
-        run: dotnet pack $env:PROJECT_PATH -c Release --no-build -o $env:ARTIFACTS_PATH
+        run: dotnet pack $env:PROJECT_PATH -c Release --no-build -o $env:ARTIFACTS_PATH -p:Version=$env:PACKAGE_VERSION -p:PackageVersion=$env:PACKAGE_VERSION
 
       - name: Publish NuGet package
         if: success()
@@ -51,20 +110,19 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:NUGET_API_KEY)) {
-            Write-Host "NUGET_API_KEY secret not set; skipping publish."
-            exit 0
+            throw "NUGET_API_KEY secret not set; cannot publish $env:PACKAGE_ID $env:PACKAGE_VERSION."
           }
 
           $packages = Get-ChildItem -Path $env:ARTIFACTS_PATH -Filter *.nupkg -File
           foreach ($package in $packages) {
             Write-Host "Publishing $($package.FullName)"
-            dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+            dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json
           }
 
           $symbolPackages = Get-ChildItem -Path $env:ARTIFACTS_PATH -Filter *.snupkg -File
           foreach ($symbolPackage in $symbolPackages) {
             Write-Host "Publishing symbols $($symbolPackage.FullName)"
-            dotnet nuget push $symbolPackage.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+            dotnet nuget push $symbolPackage.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json
           }
 
       - name: Summary
@@ -72,6 +130,7 @@ jobs:
         run: |
           "## TripleG3.Windows.Shell Publish" >> $env:GITHUB_STEP_SUMMARY
           "Commit: $env:GITHUB_SHA" >> $env:GITHUB_STEP_SUMMARY
+          "Package version: $env:PACKAGE_VERSION" >> $env:GITHUB_STEP_SUMMARY
           "Package artifacts:" >> $env:GITHUB_STEP_SUMMARY
 
           if (Test-Path $env:ARTIFACTS_PATH) {
@@ -84,4 +143,4 @@ jobs:
     # Notes:
     # - Set the repository or organization secret NUGET_API_KEY with a valid NuGet.org API key.
     # - This workflow intentionally uses windows-latest because tests exercise real Windows DLLs.
-    # - Increment the package version before publishing a new release; existing versions are skipped.
+    # - The package version is calculated automatically from the latest stable version on NuGet.org.
