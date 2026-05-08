@@ -11,7 +11,7 @@ namespace TripleG3.Windows.Shell;
 /// The set of exported <c>Ws2_32.dll</c> functions can differ between Windows versions and installed Windows features.
 /// This wrapper discovers the exports available on the current machine at runtime and lets callers bind the exact
 /// delegate signature they need with <see cref="GetFunction{TDelegate}(string)" /> or
-/// <see cref="TryGetFunction{TDelegate}(string, out TDelegate?)" />. Prefer higher-level .NET networking APIs for
+/// <c>TryGetFunction&lt;TDelegate&gt;</c>. Prefer higher-level .NET networking APIs for
 /// ordinary application code; use this type when code needs direct access to Windows Winsock networking exports.
 /// </remarks>
 public static class Ws2_32

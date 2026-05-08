@@ -1,10 +1,10 @@
 # TripleG3.Windows.Shell
 
-`TripleG3.Windows.Shell` is a Windows-only .NET 10 library for working with core Win32 shell, windowing, graphics, and process APIs from managed code.
+`TripleG3.Windows.Shell` is a Windows-only .NET 10 library for working with core Win32 shell, windowing, graphics, process, networking, device, HID, and USB APIs from managed code.
 
 The library exposes two layers:
 
-- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, `kernel32.dll`, and common Windows networking DLLs.
+- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, `kernel32.dll`, common Windows networking DLLs, and Windows device/USB DLLs.
 - **App-facing services and interfaces** for common operations that should be easy to inject, consume, and test.
 
 The static wrappers are the low-level escape hatch. The services are the preferred API for normal application code.
@@ -32,6 +32,10 @@ Do not add runtime operating-system guards for normal library code. The target f
 | `Dnsapi` | Static class | Dynamic access to DNS exports in `Dnsapi.dll` | Advanced/native interop callers |
 | `Iphlpapi` | Static class | Dynamic access to network adapter, routing, and IP helper exports in `Iphlpapi.dll` | Advanced/native interop callers |
 | `Wlanapi` | Static class | Dynamic access to Wi-Fi management exports in `Wlanapi.dll` | Advanced/native interop callers |
+| `SetupApi` | Static class | Dynamic access to device installation and hardware enumeration exports in `SetupAPI.dll` | Advanced/native interop callers |
+| `CfgMgr32` | Static class | Dynamic access to configuration manager device tree exports in `CfgMgr32.dll` | Advanced/native interop callers |
+| `Hid` | Static class | Dynamic access to HID/gamepad/sensor exports in `Hid.dll` | Advanced/native interop callers |
+| `WinUsb` | Static class | Dynamic access to USB device communication exports in `WinUsb.dll` | Advanced/native interop callers |
 | `IWindowHandleService` | Interface | App-facing window handle operations | Application code |
 | `User32WindowHandleService` | Concrete service | `IWindowHandleService` implementation backed by `User32` | Direct construction or DI registration |
 | `WindowsShellServiceCollectionExtensions` | Static class | Dependency injection registration | Application startup/composition root |
@@ -40,7 +44,7 @@ Do not add runtime operating-system guards for normal library code. The target f
 
 Use these rules when adding features or consuming the library:
 
-1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, and `Wlanapi` static.
+1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` static.
 2. Do not create broad interfaces like `IUser32`, `IGdi32`, `IKernel32`, or `IWinHttp`.
 3. Add small capability-based interfaces for app-facing behavior.
 4. Prefer dependency injection for application code.
@@ -66,7 +70,7 @@ Avoid service names that mirror DLL names:
 
 ## Static wrapper model
 
-`User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, and `Wlanapi` all follow the same pattern.
+`User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` all follow the same pattern.
 
 Each wrapper exposes:
 
@@ -84,7 +88,7 @@ Each wrapper exposes:
 | `TryGetFunction<TDelegate>(...)` | Resolve an export and convert it to a managed delegate. |
 | `GetFunction<TDelegate>(...)` | Resolve an export to a managed delegate or throw. |
 
-The wrappers load DLLs from the Windows system directory and parse the portable executable export table so callers can discover the exports available on the current OS build. The networking wrappers are intentionally low-level; prefer `System.Net`, `System.Net.Http`, and other managed APIs unless you specifically need a Windows-native export.
+The wrappers load DLLs from the Windows system directory and parse the portable executable export table so callers can discover the exports available on the current OS build. The networking and device wrappers are intentionally low-level; prefer `System.Net`, `System.Net.Http`, built-in .NET device abstractions, and vendor SDKs unless you specifically need a Windows-native export.
 
 ## Quick start with dependency injection
 
@@ -122,7 +126,7 @@ foreach (var exportName in User32.ExportNames.Take(20))
 }
 ```
 
-The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, and the networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`.
+The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`, and device wrappers such as `SetupApi.ExportNames`, `CfgMgr32.ExportNames`, `Hid.ExportNames`, or `WinUsb.ExportNames`.
 
 ### Resolve a native function pointer
 
@@ -200,8 +204,37 @@ Use the same model for:
 - `Dnsapi` (`DnsQuery_W`, `DnsFree`, `DnsRecordListFree`) for DNS APIs.
 - `Iphlpapi` (`GetAdaptersAddresses`, `GetIfTable`, `GetIpForwardTable`) for adapter and routing APIs.
 - `Wlanapi` (`WlanOpenHandle`, `WlanEnumInterfaces`, `WlanCloseHandle`) for Wi-Fi APIs.
+- `SetupApi` (`SetupDiGetClassDevsW`, `SetupDiEnumDeviceInfo`, `SetupDiDestroyDeviceInfoList`) for device installation and hardware enumeration APIs.
+- `CfgMgr32` (`CM_Get_Child`, `CM_Get_Sibling`, `CM_Get_Device_IDW`) for configuration manager device tree APIs.
+- `Hid` (`HidD_GetHidGuid`, `HidD_GetAttributes`, `HidP_GetCaps`) for HID devices such as gamepads and sensors.
+- `WinUsb` (`WinUsb_Initialize`, `WinUsb_ReadPipe`, `WinUsb_Free`) for USB device communication APIs.
 
-Always follow the Windows SDK contract for initialization and cleanup. For example, Winsock APIs that require a session should be used after `WSAStartup` and paired with `WSACleanup`, and handles returned by WinInet, WinHTTP, and WLAN APIs must be closed with the matching native close function.
+Always follow the Windows SDK contract for initialization and cleanup. For example, Winsock APIs that require a session should be used after `WSAStartup` and paired with `WSACleanup`, handles returned by WinInet, WinHTTP, WLAN, SetupAPI, and WinUSB APIs must be closed with the matching native close/free function, and HID preparsed data must be released according to the HID API contract.
+
+### Bind and call a device or USB DLL function
+
+Device wrappers use the same delegate-binding API. This example reads the system HID class GUID without opening a device handle:
+
+```csharp
+using System.Runtime.InteropServices;
+using TripleG3.Windows.Shell;
+
+var hidDGetHidGuid = Hid.GetFunction<HidDGetHidGuidDelegate>("HidD_GetHidGuid");
+hidDGetHidGuid(out var hidClassGuid);
+
+Console.WriteLine(hidClassGuid);
+
+[UnmanagedFunctionPointer(CallingConvention.Winapi)]
+delegate void HidDGetHidGuidDelegate(out Guid hidGuid);
+```
+
+For AI agents and automation, use this workflow:
+
+1. Pick the wrapper that owns the DLL export (`SetupApi`, `CfgMgr32`, `Hid`, or `WinUsb`).
+2. Check `ExportNames` or `TryGetExport` for OS-version-specific functions before binding.
+3. Define a private delegate that exactly matches the Windows SDK signature.
+4. Bind with `GetFunction<TDelegate>` only after confirming handle ownership, buffer lifetime, character set, and cleanup rules.
+5. Prefer adding a small app-facing service if application code needs a safe reusable operation instead of raw native access.
 
 ## Delegate binding checklist
 
@@ -270,7 +303,7 @@ dotnet test
 
 Tests are Windows-only and validate:
 
-- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, and `Wlanapi.dll`.
+- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, and `WinUsb.dll`.
 - Named and ordinal export resolution.
 - Safe delegate binding for known stable APIs.
 - Dependency injection registration for app-facing services.
@@ -289,6 +322,10 @@ src/
     Dnsapi.cs
     Iphlpapi.cs
     Wlanapi.cs
+    SetupApi.cs
+    CfgMgr32.cs
+    Hid.cs
+    WinUsb.cs
     NativeModule.cs
     Services/
       IWindowHandleService.cs
@@ -304,7 +341,7 @@ When adding a new capability:
 1. Decide whether it is raw native access or app-facing behavior.
 2. Raw native access belongs in the static wrapper layer.
 3. App-facing behavior belongs behind a small interface.
-4. Implement app-facing behavior by binding delegates from `User32`, `Gdi32`, or `Kernel32`.
+4. Implement app-facing behavior by binding delegates from the relevant static wrappers.
 5. Register app-facing services in `AddTripleG3WindowsShell`.
 6. Add tests for export resolution, service behavior, and DI registration.
 

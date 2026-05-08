@@ -14,7 +14,7 @@ namespace TripleG3.Windows.Shell;
 /// The set of exported <c>kernel32.dll</c> functions can differ between Windows versions, and several exports are
 /// documented as forwarding to lower-level Windows modules. This wrapper therefore discovers the exports available
 /// on the current machine at runtime and lets callers bind the exact delegate signature they need with
-/// <see cref="GetFunction{TDelegate}(string)" /> or <see cref="TryGetFunction{TDelegate}(string, out TDelegate?)" />.
+/// <see cref="GetFunction{TDelegate}(string)" /> or <c>TryGetFunction&lt;TDelegate&gt;</c>.
 /// </remarks>
 public static class Kernel32
 {
