@@ -1,10 +1,10 @@
 # TripleG3.Windows.Shell
 
-`TripleG3.Windows.Shell` is a Windows-only .NET 10 library for working with core Win32 shell, windowing, graphics, process, networking, device, HID, and USB APIs from managed code.
+`TripleG3.Windows.Shell` is a Windows-only .NET 10 library for working with core Win32 shell, windowing, graphics, process, networking, device, HID, USB, security, cryptography, SSPI, and smart card APIs from managed code.
 
 The library exposes two layers:
 
-- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, `kernel32.dll`, common Windows networking DLLs, and Windows device/USB DLLs.
+- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, `kernel32.dll`, common Windows networking DLLs, Windows device/USB DLLs, and Windows security/cryptography/smart-card DLLs.
 - **App-facing services and interfaces** for common operations that should be easy to inject, consume, and test.
 
 The static wrappers are the low-level escape hatch. The services are the preferred API for normal application code.
@@ -32,6 +32,13 @@ Do not add runtime operating-system guards for normal library code. The target f
 | `Dnsapi` | Static class | Dynamic access to DNS exports in `Dnsapi.dll` | Advanced/native interop callers |
 | `Iphlpapi` | Static class | Dynamic access to network adapter, routing, and IP helper exports in `Iphlpapi.dll` | Advanced/native interop callers |
 | `Wlanapi` | Static class | Dynamic access to Wi-Fi management exports in `Wlanapi.dll` | Advanced/native interop callers |
+| `Advapi32` | Static class | Dynamic access to registry, service control, security descriptor, LSA, and event logging exports in `Advapi32.dll` | Advanced/native interop callers |
+| `Crypt32` | Static class | Dynamic access to certificate store and encoding/decoding exports in `Crypt32.dll` | Advanced/native interop callers |
+| `BCrypt` | Static class | Dynamic access to CNG primitive algorithm exports in `BCrypt.dll` | Advanced/native interop callers |
+| `NCrypt` | Static class | Dynamic access to CNG key storage provider and hardware-backed key exports in `NCrypt.dll` | Advanced/native interop callers |
+| `Secur32` | Static class | Dynamic access to SSPI authentication exports in `Secur32.dll` | Advanced/native interop callers |
+| `Winscard` | Static class | Dynamic access to smart card resource manager exports in `Winscard.dll` | Advanced/native interop callers |
+| `SCardDlg` | Static class | Dynamic access to smart card common dialog exports in `SCardDlg.dll` | Advanced/native interop callers |
 | `SetupApi` | Static class | Dynamic access to device installation and hardware enumeration exports in `SetupAPI.dll` | Advanced/native interop callers |
 | `CfgMgr32` | Static class | Dynamic access to configuration manager device tree exports in `CfgMgr32.dll` | Advanced/native interop callers |
 | `Hid` | Static class | Dynamic access to HID/gamepad/sensor exports in `Hid.dll` | Advanced/native interop callers |
@@ -44,7 +51,7 @@ Do not add runtime operating-system guards for normal library code. The target f
 
 Use these rules when adding features or consuming the library:
 
-1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` static.
+1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` static.
 2. Do not create broad interfaces like `IUser32`, `IGdi32`, `IKernel32`, or `IWinHttp`.
 3. Add small capability-based interfaces for app-facing behavior.
 4. Prefer dependency injection for application code.
@@ -70,7 +77,7 @@ Avoid service names that mirror DLL names:
 
 ## Static wrapper model
 
-`User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` all follow the same pattern.
+`User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` all follow the same pattern.
 
 Each wrapper exposes:
 
@@ -88,7 +95,7 @@ Each wrapper exposes:
 | `TryGetFunction<TDelegate>(...)` | Resolve an export and convert it to a managed delegate. |
 | `GetFunction<TDelegate>(...)` | Resolve an export to a managed delegate or throw. |
 
-The wrappers load DLLs from the Windows system directory and parse the portable executable export table so callers can discover the exports available on the current OS build. The networking and device wrappers are intentionally low-level; prefer `System.Net`, `System.Net.Http`, built-in .NET device abstractions, and vendor SDKs unless you specifically need a Windows-native export.
+The wrappers load DLLs from the Windows system directory and parse the portable executable export table so callers can discover the exports available on the current OS build. The networking, device, security, cryptography, SSPI, and smart-card wrappers are intentionally low-level; prefer `System.Net`, `System.Net.Http`, `System.Security.Cryptography`, `System.Security.Cryptography.X509Certificates`, built-in .NET abstractions, and vendor SDKs unless you specifically need a Windows-native export.
 
 ## Quick start with dependency injection
 
@@ -126,7 +133,7 @@ foreach (var exportName in User32.ExportNames.Take(20))
 }
 ```
 
-The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`, and device wrappers such as `SetupApi.ExportNames`, `CfgMgr32.ExportNames`, `Hid.ExportNames`, or `WinUsb.ExportNames`.
+The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`, security and cryptography wrappers such as `Advapi32.ExportNames`, `Crypt32.ExportNames`, `BCrypt.ExportNames`, `NCrypt.ExportNames`, or `Secur32.ExportNames`, smart-card wrappers such as `Winscard.ExportNames` or `SCardDlg.ExportNames`, and device wrappers such as `SetupApi.ExportNames`, `CfgMgr32.ExportNames`, `Hid.ExportNames`, or `WinUsb.ExportNames`.
 
 ### Resolve a native function pointer
 
@@ -204,12 +211,58 @@ Use the same model for:
 - `Dnsapi` (`DnsQuery_W`, `DnsFree`, `DnsRecordListFree`) for DNS APIs.
 - `Iphlpapi` (`GetAdaptersAddresses`, `GetIfTable`, `GetIpForwardTable`) for adapter and routing APIs.
 - `Wlanapi` (`WlanOpenHandle`, `WlanEnumInterfaces`, `WlanCloseHandle`) for Wi-Fi APIs.
+- `Advapi32` (`RegOpenKeyExW`, `OpenSCManagerW`, `RegisterEventSourceW`) for registry, service control, security descriptor, LSA, and event logging APIs.
+- `Crypt32` (`CertOpenStore`, `CertCloseStore`, `CryptStringToBinaryW`) for certificates, certificate stores, and encoding/decoding APIs.
+- `BCrypt` (`BCryptOpenAlgorithmProvider`, `BCryptGenRandom`, `BCryptCloseAlgorithmProvider`) for CNG primitive algorithms such as hashing, AES, RSA, and random bytes.
+- `NCrypt` (`NCryptOpenStorageProvider`, `NCryptOpenKey`, `NCryptFreeObject`) for CNG key storage providers and hardware-backed keys.
+- `Secur32` (`AcquireCredentialsHandleW`, `InitializeSecurityContextW`, `FreeCredentialsHandle`) for SSPI authentication APIs such as Kerberos, NTLM, Negotiate, and Schannel.
+- `Winscard` (`SCardEstablishContext`, `SCardListReadersW`, `SCardReleaseContext`) for smart card resource manager APIs.
+- `SCardDlg` (`SCardUIDlgSelectCardW`, `GetOpenCardNameW`) for smart card selection dialog APIs.
 - `SetupApi` (`SetupDiGetClassDevsW`, `SetupDiEnumDeviceInfo`, `SetupDiDestroyDeviceInfoList`) for device installation and hardware enumeration APIs.
 - `CfgMgr32` (`CM_Get_Child`, `CM_Get_Sibling`, `CM_Get_Device_IDW`) for configuration manager device tree APIs.
 - `Hid` (`HidD_GetHidGuid`, `HidD_GetAttributes`, `HidP_GetCaps`) for HID devices such as gamepads and sensors.
 - `WinUsb` (`WinUsb_Initialize`, `WinUsb_ReadPipe`, `WinUsb_Free`) for USB device communication APIs.
 
-Always follow the Windows SDK contract for initialization and cleanup. For example, Winsock APIs that require a session should be used after `WSAStartup` and paired with `WSACleanup`, handles returned by WinInet, WinHTTP, WLAN, SetupAPI, and WinUSB APIs must be closed with the matching native close/free function, and HID preparsed data must be released according to the HID API contract.
+Always follow the Windows SDK contract for initialization and cleanup. For example, Winsock APIs that require a session should be used after `WSAStartup` and paired with `WSACleanup`, handles returned by WinInet, WinHTTP, WLAN, Advapi32, Crypt32, BCrypt, NCrypt, Secur32, Winscard, SetupAPI, and WinUSB APIs must be closed with the matching native close/free function, and HID preparsed data must be released according to the HID API contract.
+
+### Probe security, crypto, SSPI, or smart-card exports safely
+
+For sensitive or hardware-backed APIs, separate export discovery from invocation. This lets humans and AI agents decide whether an OS build supports a function without opening registries, services, credentials, providers, smart cards, or dialogs.
+
+```csharp
+using TripleG3.Windows.Shell;
+
+if (BCrypt.TryGetExport("BCryptGenRandom", out var genRandomAddress))
+{
+    Console.WriteLine($"BCryptGenRandom is available at 0x{genRandomAddress:X}.");
+}
+
+if (Secur32.TryGetExport("AcquireCredentialsHandleW", out _))
+{
+    Console.WriteLine("SSPI credential acquisition is available on this OS build.");
+}
+```
+
+When you do bind one of these exports, define the delegate from the Windows SDK signature and keep ownership rules next to the call site:
+
+```csharp
+using System.Runtime.InteropServices;
+using TripleG3.Windows.Shell;
+
+var nCryptFreeObject = NCrypt.GetFunction<NCryptFreeObjectDelegate>("NCryptFreeObject");
+
+// Only call this with a valid NCRYPT_HANDLE that your code owns.
+[UnmanagedFunctionPointer(CallingConvention.Winapi)]
+delegate int NCryptFreeObjectDelegate(nint objectHandle);
+```
+
+For AI agents and automation, use this workflow for sensitive native APIs:
+
+1. Prefer a managed .NET API first, such as `RegistryKey`, `ServiceController`, `X509Store`, `RandomNumberGenerator`, `RSA`, `NegotiateStream`, or `SslStream`.
+2. Use the static wrapper only when a specific native export is required.
+3. Probe with `ExportNames` or `TryGetExport` before binding OS-version-specific functions.
+4. Do not call APIs that mutate registry keys, services, security descriptors, LSA state, credentials, key stores, certificates, smart cards, or UI dialogs unless the user explicitly requested that operation.
+5. Keep tests for these APIs metadata-only or ignored/manual unless the side effects are fully mocked or isolated.
 
 ### Bind and call a device or USB DLL function
 
@@ -303,10 +356,12 @@ dotnet test
 
 Tests are Windows-only and validate:
 
-- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, and `WinUsb.dll`.
+- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `Advapi32.dll`, `Crypt32.dll`, `BCrypt.dll`, `NCrypt.dll`, `Secur32.dll`, `Winscard.dll`, `SCardDlg.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, and `WinUsb.dll`.
 - Named and ordinal export resolution.
 - Safe delegate binding for known stable APIs.
 - Dependency injection registration for app-facing services.
+
+Native export validation tests that could touch Windows services, security packages, crypto providers, smart card readers, dialogs, or other machine state are marked with `Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)`. Do not enable those tests in automated runs unless the environment is intentionally prepared for native validation.
 
 ## Repository layout
 
@@ -322,6 +377,13 @@ src/
     Dnsapi.cs
     Iphlpapi.cs
     Wlanapi.cs
+    Advapi32.cs
+    Crypt32.cs
+    BCrypt.cs
+    NCrypt.cs
+    Secur32.cs
+    Winscard.cs
+    SCardDlg.cs
     SetupApi.cs
     CfgMgr32.cs
     Hid.cs
