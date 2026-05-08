@@ -4,7 +4,7 @@
 
 The library exposes two layers:
 
-- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, and `kernel32.dll`.
+- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, `kernel32.dll`, and `shell32.dll`.
 - **App-facing services and interfaces** for common operations that should be easy to inject, consume, and test.
 
 The static wrappers are the low-level escape hatch. The services are the preferred API for normal application code.
@@ -26,6 +26,7 @@ Do not add runtime operating-system guards for normal library code. The target f
 | `User32` | Static class | Dynamic access to `user32.dll` exports | Advanced/native interop callers and internal services |
 | `Gdi32` | Static class | Dynamic access to `gdi32.dll` exports | Advanced/native interop callers and internal services |
 | `Kernel32` | Static class | Dynamic access to `kernel32.dll` exports | Advanced/native interop callers and internal services |
+| `Shell32` | Static class | Dynamic access to `shell32.dll` exports | Advanced/native interop callers and internal services |
 | `IWindowHandleService` | Interface | App-facing window handle operations | Application code |
 | `User32WindowHandleService` | Concrete service | `IWindowHandleService` implementation backed by `User32` | Direct construction or DI registration |
 | `WindowsShellServiceCollectionExtensions` | Static class | Dependency injection registration | Application startup/composition root |
@@ -34,8 +35,8 @@ Do not add runtime operating-system guards for normal library code. The target f
 
 Use these rules when adding features or consuming the library:
 
-1. Keep `User32`, `Gdi32`, and `Kernel32` static.
-2. Do not create broad interfaces like `IUser32`, `IGdi32`, or `IKernel32`.
+1. Keep `User32`, `Gdi32`, `Kernel32`, and `Shell32` static.
+2. Do not create broad interfaces like `IUser32`, `IGdi32`, `IKernel32`, or `IShell32`.
 3. Add small capability-based interfaces for app-facing behavior.
 4. Prefer dependency injection for application code.
 5. Use the static wrappers directly only when you need low-level export discovery or a function that does not yet have a service abstraction.
@@ -57,10 +58,11 @@ Avoid service names that mirror DLL names:
 - `IUser32`
 - `IGdi32`
 - `IKernel32`
+- `IShell32`
 
 ## Static wrapper model
 
-`User32`, `Gdi32`, and `Kernel32` all follow the same pattern.
+`User32`, `Gdi32`, `Kernel32`, and `Shell32` all follow the same pattern.
 
 Each wrapper exposes:
 
@@ -116,7 +118,7 @@ foreach (var exportName in User32.ExportNames.Take(20))
 }
 ```
 
-The same model works for `Gdi32.ExportNames` and `Kernel32.ExportNames`.
+The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, and `Shell32.ExportNames`.
 
 ### Resolve a native function pointer
 
@@ -173,6 +175,20 @@ delegate nint GetCurrentProcessDelegate();
 ```
 
 `GetCurrentProcess` returns a pseudo-handle. Do not close it.
+
+### Bind and call a `shell32.dll` function
+
+```csharp
+using System.Runtime.InteropServices;
+using TripleG3.Windows.Shell;
+
+var isUserAnAdmin = Shell32.GetFunction<IsUserAnAdminDelegate>("IsUserAnAdmin");
+bool runningAsAdmin = isUserAnAdmin();
+
+[UnmanagedFunctionPointer(CallingConvention.Winapi)]
+[return: MarshalAs(UnmanagedType.Bool)]
+delegate bool IsUserAnAdminDelegate();
+```
 
 ## Delegate binding checklist
 
@@ -241,7 +257,7 @@ dotnet test
 
 Tests are Windows-only and validate:
 
-- Export discovery for `user32.dll`, `gdi32.dll`, and `kernel32.dll`.
+- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, and `shell32.dll`.
 - Named and ordinal export resolution.
 - Safe delegate binding for known stable APIs.
 - Dependency injection registration for app-facing services.
@@ -254,6 +270,7 @@ src/
     User32.cs
     Gdi32.cs
     Kernel32.cs
+    Shell32.cs
     Services/
       IWindowHandleService.cs
       User32WindowHandleService.cs
