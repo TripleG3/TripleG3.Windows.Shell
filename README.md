@@ -44,6 +44,10 @@ Do not add runtime operating-system guards for normal library code. The target f
 | `CfgMgr32` | Static class | Dynamic access to configuration manager device tree exports in `CfgMgr32.dll` | Advanced/native interop callers |
 | `Hid` | Static class | Dynamic access to HID/gamepad/sensor exports in `Hid.dll` | Advanced/native interop callers |
 | `WinUsb` | Static class | Dynamic access to USB device communication exports in `WinUsb.dll` | Advanced/native interop callers |
+| `Psapi` | Static class | Dynamic access to process and module inspection exports in `Psapi.dll` | Advanced/native interop callers |
+| `Pdh` | Static class | Dynamic access to performance data helper exports in `Pdh.dll` | Advanced/native interop callers |
+| `Ntdll` | Static class | Dynamic access to low-level NT exports in `Ntdll.dll` | Advanced/native interop callers |
+| `DbgHelp` | Static class | Dynamic access to symbol and stack walking exports in `DbgHelp.dll` | Advanced/native interop callers |
 | `IWindowHandleService` | Interface | App-facing window handle operations | Application code |
 | `User32WindowHandleService` | Concrete service | `IWindowHandleService` implementation backed by `User32` | Direct construction or DI registration |
 | `WindowsShellServiceCollectionExtensions` | Static class | Dependency injection registration | Application startup/composition root |
@@ -52,7 +56,7 @@ Do not add runtime operating-system guards for normal library code. The target f
 
 Use these rules when adding features or consuming the library:
 
-1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Shell32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` static.
+1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Shell32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, `WinUsb`, `Psapi`, `Pdh`, `Ntdll`, and `DbgHelp` static.
 2. Do not create broad interfaces like `IUser32`, `IGdi32`, `IKernel32`, `IShell32`, or `IWinHttp`.
 3. Add small capability-based interfaces for app-facing behavior.
 4. Prefer dependency injection for application code.
@@ -79,7 +83,7 @@ Avoid service names that mirror DLL names:
 
 ## Static wrapper model
 
-`User32`, `Gdi32`, `Kernel32`, `Shell32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` all follow the same pattern.
+`User32`, `Gdi32`, `Kernel32`, `Shell32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, `WinUsb`, `Psapi`, `Pdh`, `Ntdll`, and `DbgHelp` all follow the same pattern.
 
 Each wrapper exposes:
 
@@ -135,7 +139,7 @@ foreach (var exportName in User32.ExportNames.Take(20))
 }
 ```
 
-The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, `Shell32.ExportNames`, networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`, security and cryptography wrappers such as `Advapi32.ExportNames`, `Crypt32.ExportNames`, `BCrypt.ExportNames`, `NCrypt.ExportNames`, or `Secur32.ExportNames`, smart-card wrappers such as `Winscard.ExportNames` or `SCardDlg.ExportNames`, and device wrappers such as `SetupApi.ExportNames`, `CfgMgr32.ExportNames`, `Hid.ExportNames`, or `WinUsb.ExportNames`.
+The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, `Shell32.ExportNames`, networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`, security and cryptography wrappers such as `Advapi32.ExportNames`, `Crypt32.ExportNames`, `BCrypt.ExportNames`, `NCrypt.ExportNames`, or `Secur32.ExportNames`, smart-card wrappers such as `Winscard.ExportNames` or `SCardDlg.ExportNames`, device wrappers such as `SetupApi.ExportNames`, `CfgMgr32.ExportNames`, `Hid.ExportNames`, or `WinUsb.ExportNames`, and system diagnostics wrappers such as `Psapi.ExportNames`, `Pdh.ExportNames`, `Ntdll.ExportNames`, or `DbgHelp.ExportNames`.
 
 ### Resolve a native function pointer
 
@@ -238,6 +242,10 @@ Use the same model for:
 - `CfgMgr32` (`CM_Get_Child`, `CM_Get_Sibling`, `CM_Get_Device_IDW`) for configuration manager device tree APIs.
 - `Hid` (`HidD_GetHidGuid`, `HidD_GetAttributes`, `HidP_GetCaps`) for HID devices such as gamepads and sensors.
 - `WinUsb` (`WinUsb_Initialize`, `WinUsb_ReadPipe`, `WinUsb_Free`) for USB device communication APIs.
+- `Psapi` (`EnumProcesses`, `GetProcessMemoryInfo`, `GetModuleFileNameExW`) for process and module inspection APIs.
+- `Pdh` (`PdhOpenQueryW`, `PdhCollectQueryData`, `PdhCloseQuery`) for performance counter query APIs.
+- `Ntdll` (`NtQueryInformationProcess`, `RtlNtStatusToDosError`, `RtlGetVersion`) for low-level NT runtime APIs.
+- `DbgHelp` (`SymInitialize`, `StackWalk64`, `SymCleanup`) for symbol and stack walking APIs.
 
 Always follow the Windows SDK contract for initialization and cleanup. For example, Winsock APIs that require a session should be used after `WSAStartup` and paired with `WSACleanup`, handles returned by WinInet, WinHTTP, WLAN, Advapi32, Crypt32, BCrypt, NCrypt, Secur32, Winscard, SetupAPI, and WinUSB APIs must be closed with the matching native close/free function, and HID preparsed data must be released according to the HID API contract.
 
@@ -372,7 +380,7 @@ dotnet test
 
 Tests are Windows-only and validate:
 
-- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `shell32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `Advapi32.dll`, `Crypt32.dll`, `BCrypt.dll`, `NCrypt.dll`, `Secur32.dll`, `Winscard.dll`, `SCardDlg.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, and `WinUsb.dll`.
+- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `shell32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `Advapi32.dll`, `Crypt32.dll`, `BCrypt.dll`, `NCrypt.dll`, `Secur32.dll`, `Winscard.dll`, `SCardDlg.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, `WinUsb.dll`, `Psapi.dll`, `Pdh.dll`, `Ntdll.dll`, and `DbgHelp.dll`.
 - Named and ordinal export resolution.
 - Safe delegate binding for known stable APIs.
 - Dependency injection registration for app-facing services.
@@ -405,6 +413,10 @@ src/
     CfgMgr32.cs
     Hid.cs
     WinUsb.cs
+    Psapi.cs
+    Pdh.cs
+    Ntdll.cs
+    DbgHelp.cs
     NativeModule.cs
     Services/
       IWindowHandleService.cs
