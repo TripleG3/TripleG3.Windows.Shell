@@ -56,12 +56,31 @@ public sealed class NetworkNativeWrapperTests
     [TestMethod]
     public void NewExportTypes_ReportStableDisplayValues()
     {
-        AssertExportMetadata(new Ws2_32.Export(null, 42, 123, null), "#42", isNamed: false, isForwarded: false);
-        AssertExportMetadata(new WinInet.Export("Forwarded", 43, 456, "example.Target"), "Forwarded", isNamed: true, isForwarded: true);
-        AssertExportMetadata(new WinHttp.Export("Named", 44, 789, null), "Named", isNamed: true, isForwarded: false);
-        AssertExportMetadata(new Dnsapi.Export(null, 45, 123, "example.Target"), "#45", isNamed: false, isForwarded: true);
-        AssertExportMetadata(new Iphlpapi.Export("IpHelper", 46, 456, null), "IpHelper", isNamed: true, isForwarded: false);
-        AssertExportMetadata(new Wlanapi.Export(null, 47, 789, null), "#47", isNamed: false, isForwarded: false);
+        var winsockExport = new Ws2_32.Export(null, 42, 123, null);
+        var winInetExport = new WinInet.Export("Forwarded", 43, 456, "example.Target");
+        var winHttpExport = new WinHttp.Export("Named", 44, 789, null);
+        var dnsExport = new Dnsapi.Export(null, 45, 123, "example.Target");
+        var ipHelperExport = new Iphlpapi.Export("IpHelper", 46, 456, null);
+        var wlanExport = new Wlanapi.Export(null, 47, 789, null);
+
+        Assert.AreEqual("#42", winsockExport.NameOrOrdinal);
+        Assert.IsFalse(winsockExport.IsNamed);
+        Assert.IsFalse(winsockExport.IsForwarded);
+        Assert.AreEqual("Forwarded", winInetExport.NameOrOrdinal);
+        Assert.IsTrue(winInetExport.IsNamed);
+        Assert.IsTrue(winInetExport.IsForwarded);
+        Assert.AreEqual("Named", winHttpExport.NameOrOrdinal);
+        Assert.IsTrue(winHttpExport.IsNamed);
+        Assert.IsFalse(winHttpExport.IsForwarded);
+        Assert.AreEqual("#45", dnsExport.NameOrOrdinal);
+        Assert.IsFalse(dnsExport.IsNamed);
+        Assert.IsTrue(dnsExport.IsForwarded);
+        Assert.AreEqual("IpHelper", ipHelperExport.NameOrOrdinal);
+        Assert.IsTrue(ipHelperExport.IsNamed);
+        Assert.IsFalse(ipHelperExport.IsForwarded);
+        Assert.AreEqual("#47", wlanExport.NameOrOrdinal);
+        Assert.IsFalse(wlanExport.IsNamed);
+        Assert.IsFalse(wlanExport.IsForwarded);
     }
 
     private static void AssertKnownWrapperState(
@@ -89,13 +108,6 @@ public sealed class NetworkNativeWrapperTests
         {
             CollectionAssert.Contains(exportNames.ToList(), expectedExport);
         }
-    }
-
-    private static void AssertExportMetadata(dynamic export, string expectedNameOrOrdinal, bool isNamed, bool isForwarded)
-    {
-        Assert.AreEqual(expectedNameOrOrdinal, export.NameOrOrdinal);
-        Assert.AreEqual(isNamed, export.IsNamed);
-        Assert.AreEqual(isForwarded, export.IsForwarded);
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
