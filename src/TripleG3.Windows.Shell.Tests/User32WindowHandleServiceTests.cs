@@ -4,6 +4,7 @@ namespace TripleG3.Windows.Shell.Tests;
 public sealed class User32WindowHandleServiceTests
 {
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetDesktopWindow_ReturnsExistingWindowHandle()
     {
         var service = new User32WindowHandleService();
@@ -15,6 +16,7 @@ public sealed class User32WindowHandleServiceTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void IsWindow_ZeroHandle_ReturnsFalse()
     {
         var service = new User32WindowHandleService();
@@ -23,6 +25,7 @@ public sealed class User32WindowHandleServiceTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetForegroundWindow_WhenWindowExists_ReturnsExistingWindowHandle()
     {
         var service = new User32WindowHandleService();

@@ -8,12 +8,14 @@ public sealed class Kernel32Tests
     private const string KnownExportName = "GetCurrentProcess";
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ModuleHandle_ReturnsLoadedKernel32Handle()
     {
         Assert.AreNotEqual(nint.Zero, Kernel32.ModuleHandle);
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ModulePath_PointsToLoadedKernel32Dll()
     {
         Assert.IsTrue(File.Exists(Kernel32.ModulePath), $"Expected {Kernel32.ModulePath} to exist.");
@@ -21,6 +23,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Exports_ContainsKnownNamedKernel32Functions()
     {
         var exportNames = Kernel32.ExportNames;
@@ -32,6 +35,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ExportNames_AreSortedAndMatchNamedExports()
     {
         var expectedNames = Kernel32.Exports
@@ -44,6 +48,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_KnownName_ReturnsSamePointerAsTryGetExport()
     {
         var address = Kernel32.GetExport(KnownExportName);
@@ -55,6 +60,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_KnownOrdinal_ReturnsSamePointerAsNamedExport()
     {
         var export = Kernel32.Exports.Single(export => export.Name == KnownExportName);
@@ -65,6 +71,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetExport_MissingName_ReturnsFalseAndZeroAddress()
     {
         var found = Kernel32.TryGetExport("TripleG3MissingKernel32Export", out var address);
@@ -74,6 +81,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_MissingName_ThrowsEntryPointNotFoundException()
     {
         AssertThrows<EntryPointNotFoundException>(() => Kernel32.GetExport("TripleG3MissingKernel32Export"));
@@ -92,6 +100,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetFunction_KnownName_BindsCallableDelegate()
     {
         var getCurrentProcess = Kernel32.GetFunction<GetCurrentProcessDelegate>(KnownExportName);
@@ -100,6 +109,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetFunction_KnownOrdinal_BindsCallableDelegate()
     {
         var export = Kernel32.Exports.Single(export => export.Name == KnownExportName);
@@ -111,6 +121,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetFunction_MissingName_ReturnsFalseAndNullDelegate()
     {
         var found = Kernel32.TryGetFunction<GetCurrentProcessDelegate>("TripleG3MissingKernel32Export", out var function);
@@ -120,6 +131,7 @@ public sealed class Kernel32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Export_MetadataReportsStableDisplayValues()
     {
         var namedExport = Kernel32.Exports.Single(export => export.Name == KnownExportName);

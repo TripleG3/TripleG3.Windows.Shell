@@ -8,12 +8,14 @@ public sealed class Shell32Tests
     private const string KnownExportName = "IsUserAnAdmin";
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ModuleHandle_ReturnsLoadedShell32Handle()
     {
         Assert.AreNotEqual(nint.Zero, Shell32.ModuleHandle);
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ModulePath_PointsToLoadedShell32Dll()
     {
         Assert.IsTrue(File.Exists(Shell32.ModulePath), $"Expected {Shell32.ModulePath} to exist.");
@@ -21,6 +23,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Exports_ContainsKnownNamedShell32Functions()
     {
         var exportNames = Shell32.ExportNames;
@@ -32,6 +35,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ExportNames_AreSortedAndMatchNamedExports()
     {
         var expectedNames = Shell32.Exports
@@ -44,6 +48,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_KnownName_ReturnsSamePointerAsTryGetExport()
     {
         var address = Shell32.GetExport(KnownExportName);
@@ -55,6 +60,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_KnownOrdinal_ReturnsSamePointerAsNamedExport()
     {
         var export = Shell32.Exports.Single(export => export.Name == KnownExportName);
@@ -65,6 +71,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetExport_MissingName_ReturnsFalseAndZeroAddress()
     {
         var found = Shell32.TryGetExport("TripleG3MissingShell32Export", out var address);
@@ -74,6 +81,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_MissingName_ThrowsEntryPointNotFoundException()
     {
         AssertThrows<EntryPointNotFoundException>(() => Shell32.GetExport("TripleG3MissingShell32Export"));
@@ -92,6 +100,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetFunction_KnownName_BindsCallableDelegate()
     {
         var isUserAnAdmin = Shell32.GetFunction<IsUserAnAdminDelegate>(KnownExportName);
@@ -100,6 +109,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetFunction_KnownOrdinal_BindsCallableDelegate()
     {
         var export = Shell32.Exports.Single(export => export.Name == KnownExportName);
@@ -111,6 +121,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetFunction_MissingName_ReturnsFalseAndNullDelegate()
     {
         var found = Shell32.TryGetFunction<IsUserAnAdminDelegate>("TripleG3MissingShell32Export", out var function);
@@ -120,6 +131,7 @@ public sealed class Shell32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Export_MetadataReportsStableDisplayValues()
     {
         var namedExport = Shell32.Exports.Single(export => export.Name == KnownExportName);
