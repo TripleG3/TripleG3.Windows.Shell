@@ -4,7 +4,7 @@
 
 The library exposes two layers:
 
-- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, `kernel32.dll`, common Windows networking DLLs, Windows device/USB DLLs, and Windows security/cryptography/smart-card DLLs.
+- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `shell32.dll`, common Windows networking DLLs, Windows device/USB DLLs, and Windows security/cryptography/smart-card DLLs.
 - **App-facing services and interfaces** for common operations that should be easy to inject, consume, and test.
 
 The static wrappers are the low-level escape hatch. The services are the preferred API for normal application code.
@@ -26,6 +26,7 @@ Do not add runtime operating-system guards for normal library code. The target f
 | `User32` | Static class | Dynamic access to `user32.dll` exports | Advanced/native interop callers and internal services |
 | `Gdi32` | Static class | Dynamic access to `gdi32.dll` exports | Advanced/native interop callers and internal services |
 | `Kernel32` | Static class | Dynamic access to `kernel32.dll` exports | Advanced/native interop callers and internal services |
+| `Shell32` | Static class | Dynamic access to `shell32.dll` exports | Advanced/native interop callers and internal services |
 | `Ws2_32` | Static class | Dynamic access to Winsock TCP/UDP exports in `Ws2_32.dll` | Advanced/native interop callers |
 | `WinInet` | Static class | Dynamic access to high-level HTTP/FTP exports in `WinInet.dll` | Advanced/native interop callers |
 | `WinHttp` | Static class | Dynamic access to service-friendly HTTP exports in `WinHttp.dll` | Advanced/native interop callers |
@@ -51,8 +52,8 @@ Do not add runtime operating-system guards for normal library code. The target f
 
 Use these rules when adding features or consuming the library:
 
-1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` static.
-2. Do not create broad interfaces like `IUser32`, `IGdi32`, `IKernel32`, or `IWinHttp`.
+1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Shell32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` static.
+2. Do not create broad interfaces like `IUser32`, `IGdi32`, `IKernel32`, `IShell32`, or `IWinHttp`.
 3. Add small capability-based interfaces for app-facing behavior.
 4. Prefer dependency injection for application code.
 5. Use the static wrappers directly only when you need low-level export discovery or a function that does not yet have a service abstraction.
@@ -74,10 +75,11 @@ Avoid service names that mirror DLL names:
 - `IUser32`
 - `IGdi32`
 - `IKernel32`
+- `IShell32`
 
 ## Static wrapper model
 
-`User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` all follow the same pattern.
+`User32`, `Gdi32`, `Kernel32`, `Shell32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, `Wlanapi`, `Advapi32`, `Crypt32`, `BCrypt`, `NCrypt`, `Secur32`, `Winscard`, `SCardDlg`, `SetupApi`, `CfgMgr32`, `Hid`, and `WinUsb` all follow the same pattern.
 
 Each wrapper exposes:
 
@@ -133,7 +135,7 @@ foreach (var exportName in User32.ExportNames.Take(20))
 }
 ```
 
-The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`, security and cryptography wrappers such as `Advapi32.ExportNames`, `Crypt32.ExportNames`, `BCrypt.ExportNames`, `NCrypt.ExportNames`, or `Secur32.ExportNames`, smart-card wrappers such as `Winscard.ExportNames` or `SCardDlg.ExportNames`, and device wrappers such as `SetupApi.ExportNames`, `CfgMgr32.ExportNames`, `Hid.ExportNames`, or `WinUsb.ExportNames`.
+The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, `Shell32.ExportNames`, networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`, security and cryptography wrappers such as `Advapi32.ExportNames`, `Crypt32.ExportNames`, `BCrypt.ExportNames`, `NCrypt.ExportNames`, or `Secur32.ExportNames`, smart-card wrappers such as `Winscard.ExportNames` or `SCardDlg.ExportNames`, and device wrappers such as `SetupApi.ExportNames`, `CfgMgr32.ExportNames`, `Hid.ExportNames`, or `WinUsb.ExportNames`.
 
 ### Resolve a native function pointer
 
@@ -190,6 +192,20 @@ delegate nint GetCurrentProcessDelegate();
 ```
 
 `GetCurrentProcess` returns a pseudo-handle. Do not close it.
+
+### Bind and call a `shell32.dll` function
+
+```csharp
+using System.Runtime.InteropServices;
+using TripleG3.Windows.Shell;
+
+var isUserAnAdmin = Shell32.GetFunction<IsUserAnAdminDelegate>("IsUserAnAdmin");
+bool runningAsAdmin = isUserAnAdmin();
+
+[UnmanagedFunctionPointer(CallingConvention.Winapi)]
+[return: MarshalAs(UnmanagedType.Bool)]
+delegate bool IsUserAnAdminDelegate();
+```
 
 ### Bind and call a networking DLL function
 
@@ -356,7 +372,7 @@ dotnet test
 
 Tests are Windows-only and validate:
 
-- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `Advapi32.dll`, `Crypt32.dll`, `BCrypt.dll`, `NCrypt.dll`, `Secur32.dll`, `Winscard.dll`, `SCardDlg.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, and `WinUsb.dll`.
+- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `shell32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `Advapi32.dll`, `Crypt32.dll`, `BCrypt.dll`, `NCrypt.dll`, `Secur32.dll`, `Winscard.dll`, `SCardDlg.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, and `WinUsb.dll`.
 - Named and ordinal export resolution.
 - Safe delegate binding for known stable APIs.
 - Dependency injection registration for app-facing services.
@@ -371,6 +387,7 @@ src/
     User32.cs
     Gdi32.cs
     Kernel32.cs
+    Shell32.cs
     Ws2_32.cs
     WinInet.cs
     WinHttp.cs
