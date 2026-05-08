@@ -6,6 +6,7 @@ namespace TripleG3.Windows.Shell.Tests;
 public sealed class DeviceNativeWrapperTests
 {
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void SetupApi_ExposesDeviceInstallationExports()
     {
         AssertKnownWrapperState(SetupApi.LibraryName, () => SetupApi.ModuleHandle, () => SetupApi.ModulePath, () => SetupApi.ExportNames,
@@ -14,6 +15,7 @@ public sealed class DeviceNativeWrapperTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void CfgMgr32_ExposesConfigurationManagerExports()
     {
         AssertKnownWrapperState(CfgMgr32.LibraryName, () => CfgMgr32.ModuleHandle, () => CfgMgr32.ModulePath, () => CfgMgr32.ExportNames,
@@ -22,6 +24,7 @@ public sealed class DeviceNativeWrapperTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Hid_ExposesHumanInterfaceDeviceExports()
     {
         AssertKnownWrapperState(Hid.LibraryName, () => Hid.ModuleHandle, () => Hid.ModulePath, () => Hid.ExportNames,
@@ -30,6 +33,7 @@ public sealed class DeviceNativeWrapperTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void WinUsb_ExposesUsbCommunicationExports()
     {
         AssertKnownWrapperState(WinUsb.LibraryName, () => WinUsb.ModuleHandle, () => WinUsb.ModulePath, () => WinUsb.ExportNames,

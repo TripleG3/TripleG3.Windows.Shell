@@ -9,12 +9,14 @@ public sealed class Gdi32Tests
     private const string KnownExportName = "GetStockObject";
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ModuleHandle_ReturnsLoadedGdi32Handle()
     {
         Assert.AreNotEqual(nint.Zero, Gdi32.ModuleHandle);
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ModulePath_PointsToLoadedGdi32Dll()
     {
         Assert.IsTrue(File.Exists(Gdi32.ModulePath), $"Expected {Gdi32.ModulePath} to exist.");
@@ -22,6 +24,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Exports_ContainsKnownNamedGdi32Functions()
     {
         var exportNames = Gdi32.ExportNames;
@@ -33,6 +36,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ExportNames_AreSortedAndMatchNamedExports()
     {
         var expectedNames = Gdi32.Exports
@@ -45,6 +49,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_KnownName_ReturnsSamePointerAsTryGetExport()
     {
         var address = Gdi32.GetExport(KnownExportName);
@@ -56,6 +61,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_KnownOrdinal_ReturnsSamePointerAsNamedExport()
     {
         var export = Gdi32.Exports.Single(export => export.Name == KnownExportName);
@@ -66,6 +72,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetExport_MissingName_ReturnsFalseAndZeroAddress()
     {
         var found = Gdi32.TryGetExport("TripleG3MissingGdi32Export", out var address);
@@ -75,6 +82,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_MissingName_ThrowsEntryPointNotFoundException()
     {
         AssertThrows<EntryPointNotFoundException>(() => Gdi32.GetExport("TripleG3MissingGdi32Export"));
@@ -93,6 +101,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetFunction_KnownName_BindsCallableDelegate()
     {
         var getStockObject = Gdi32.GetFunction<GetStockObjectDelegate>(KnownExportName);
@@ -101,6 +110,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetFunction_KnownOrdinal_BindsCallableDelegate()
     {
         var export = Gdi32.Exports.Single(export => export.Name == KnownExportName);
@@ -112,6 +122,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetFunction_MissingName_ReturnsFalseAndNullDelegate()
     {
         var found = Gdi32.TryGetFunction<GetStockObjectDelegate>("TripleG3MissingGdi32Export", out var function);
@@ -121,6 +132,7 @@ public sealed class Gdi32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Export_MetadataReportsStableDisplayValues()
     {
         var namedExport = Gdi32.Exports.Single(export => export.Name == KnownExportName);

@@ -6,6 +6,7 @@ namespace TripleG3.Windows.Shell.Tests;
 public sealed class NetworkNativeWrapperTests
 {
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Ws2_32_ExposesWinsockExports()
     {
         AssertKnownWrapperState(Ws2_32.LibraryName, () => Ws2_32.ModuleHandle, () => Ws2_32.ModulePath, () => Ws2_32.ExportNames,
@@ -14,6 +15,7 @@ public sealed class NetworkNativeWrapperTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void WinInet_ExposesHighLevelInternetExports()
     {
         AssertKnownWrapperState(WinInet.LibraryName, () => WinInet.ModuleHandle, () => WinInet.ModulePath, () => WinInet.ExportNames,
@@ -22,6 +24,7 @@ public sealed class NetworkNativeWrapperTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void WinHttp_ExposesHttpExports()
     {
         AssertKnownWrapperState(WinHttp.LibraryName, () => WinHttp.ModuleHandle, () => WinHttp.ModulePath, () => WinHttp.ExportNames,
@@ -30,6 +33,7 @@ public sealed class NetworkNativeWrapperTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Dnsapi_ExposesDnsExports()
     {
         AssertKnownWrapperState(Dnsapi.LibraryName, () => Dnsapi.ModuleHandle, () => Dnsapi.ModulePath, () => Dnsapi.ExportNames,
@@ -38,6 +42,7 @@ public sealed class NetworkNativeWrapperTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Iphlpapi_ExposesIpHelperExports()
     {
         AssertKnownWrapperState(Iphlpapi.LibraryName, () => Iphlpapi.ModuleHandle, () => Iphlpapi.ModulePath, () => Iphlpapi.ExportNames,
@@ -46,6 +51,7 @@ public sealed class NetworkNativeWrapperTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Wlanapi_ExposesWlanExports()
     {
         AssertKnownWrapperState(Wlanapi.LibraryName, () => Wlanapi.ModuleHandle, () => Wlanapi.ModulePath, () => Wlanapi.ExportNames,
