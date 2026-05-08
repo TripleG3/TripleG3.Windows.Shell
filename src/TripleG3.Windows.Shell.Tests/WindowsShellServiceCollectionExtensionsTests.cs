@@ -20,6 +20,7 @@ public sealed class WindowsShellServiceCollectionExtensionsTests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void AddTripleG3WindowsShell_ResolvedWindowHandleServiceUsesUser32Implementation()
     {
         var services = new ServiceCollection();

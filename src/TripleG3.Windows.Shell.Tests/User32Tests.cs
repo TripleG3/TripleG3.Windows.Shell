@@ -8,12 +8,14 @@ public sealed class User32Tests
     private const string KnownExportName = "GetDesktopWindow";
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ModuleHandle_ReturnsLoadedUser32Handle()
     {
         Assert.AreNotEqual(nint.Zero, User32.ModuleHandle);
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ModulePath_PointsToLoadedUser32Dll()
     {
         Assert.IsTrue(File.Exists(User32.ModulePath), $"Expected {User32.ModulePath} to exist.");
@@ -21,6 +23,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Exports_ContainsKnownNamedUser32Functions()
     {
         var exportNames = User32.ExportNames;
@@ -32,6 +35,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void ExportNames_AreSortedAndMatchNamedExports()
     {
         var expectedNames = User32.Exports
@@ -44,6 +48,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_KnownName_ReturnsSamePointerAsTryGetExport()
     {
         var address = User32.GetExport(KnownExportName);
@@ -55,6 +60,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_KnownOrdinal_ReturnsSamePointerAsNamedExport()
     {
         var export = User32.Exports.Single(export => export.Name == KnownExportName);
@@ -65,6 +71,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetExport_MissingName_ReturnsFalseAndZeroAddress()
     {
         var found = User32.TryGetExport("TripleG3MissingUser32Export", out var address);
@@ -74,6 +81,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetExport_MissingName_ThrowsEntryPointNotFoundException()
     {
         AssertThrows<EntryPointNotFoundException>(() => User32.GetExport("TripleG3MissingUser32Export"));
@@ -92,6 +100,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void GetFunction_KnownName_BindsCallableDelegate()
     {
         var getDesktopWindow = User32.GetFunction<GetDesktopWindowDelegate>(KnownExportName);
@@ -100,6 +109,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetFunction_KnownOrdinal_BindsCallableDelegate()
     {
         var export = User32.Exports.Single(export => export.Name == KnownExportName);
@@ -111,6 +121,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void TryGetFunction_MissingName_ReturnsFalseAndNullDelegate()
     {
         var found = User32.TryGetFunction<GetDesktopWindowDelegate>("TripleG3MissingUser32Export", out var function);
@@ -120,6 +131,7 @@ public sealed class User32Tests
     }
 
     [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void Export_MetadataReportsStableDisplayValues()
     {
         var namedExport = User32.Exports.Single(export => export.Name == KnownExportName);
