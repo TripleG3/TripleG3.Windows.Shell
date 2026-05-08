@@ -20,6 +20,20 @@ public sealed class WindowsShellServiceCollectionExtensionsTests
     }
 
     [TestMethod]
+    public void AddTripleG3WindowsShell_RegistersScreenCaptureServiceAsSingleton()
+    {
+        var services = new ServiceCollection();
+
+        var returnedServices = services.AddTripleG3WindowsShell();
+
+        Assert.AreSame(services, returnedServices);
+
+        var descriptor = services.Single(service => service.ServiceType == typeof(IScreenCaptureService));
+        Assert.AreEqual(ServiceLifetime.Singleton, descriptor.Lifetime);
+        Assert.AreEqual(typeof(User32Gdi32ScreenCaptureService), descriptor.ImplementationType);
+    }
+
+    [TestMethod]
     [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
     public void AddTripleG3WindowsShell_ResolvedWindowHandleServiceUsesUser32Implementation()
     {
@@ -34,6 +48,23 @@ public sealed class WindowsShellServiceCollectionExtensionsTests
         Assert.AreSame(firstService, secondService);
         Assert.AreEqual(typeof(User32WindowHandleService), firstService.GetType());
         Assert.AreNotEqual(nint.Zero, firstService.GetDesktopWindow());
+    }
+
+    [TestMethod]
+    [Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)]
+    public void AddTripleG3WindowsShell_ResolvedScreenCaptureServiceUsesUser32Gdi32Implementation()
+    {
+        var services = new ServiceCollection();
+        services.AddTripleG3WindowsShell();
+
+        using var provider = services.BuildServiceProvider();
+
+        var firstService = provider.GetRequiredService<IScreenCaptureService>();
+        var secondService = provider.GetRequiredService<IScreenCaptureService>();
+
+        Assert.AreSame(firstService, secondService);
+        Assert.AreEqual(typeof(User32Gdi32ScreenCaptureService), firstService.GetType());
+        Assert.IsNotEmpty(firstService.GetMonitors());
     }
 
     [TestMethod]
