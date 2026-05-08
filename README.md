@@ -4,7 +4,7 @@
 
 The library exposes two layers:
 
-- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, and `kernel32.dll`.
+- **Static native DLL wrappers** for `user32.dll`, `gdi32.dll`, `kernel32.dll`, and common Windows networking DLLs.
 - **App-facing services and interfaces** for common operations that should be easy to inject, consume, and test.
 
 The static wrappers are the low-level escape hatch. The services are the preferred API for normal application code.
@@ -26,6 +26,12 @@ Do not add runtime operating-system guards for normal library code. The target f
 | `User32` | Static class | Dynamic access to `user32.dll` exports | Advanced/native interop callers and internal services |
 | `Gdi32` | Static class | Dynamic access to `gdi32.dll` exports | Advanced/native interop callers and internal services |
 | `Kernel32` | Static class | Dynamic access to `kernel32.dll` exports | Advanced/native interop callers and internal services |
+| `Ws2_32` | Static class | Dynamic access to Winsock TCP/UDP exports in `Ws2_32.dll` | Advanced/native interop callers |
+| `WinInet` | Static class | Dynamic access to high-level HTTP/FTP exports in `WinInet.dll` | Advanced/native interop callers |
+| `WinHttp` | Static class | Dynamic access to service-friendly HTTP exports in `WinHttp.dll` | Advanced/native interop callers |
+| `Dnsapi` | Static class | Dynamic access to DNS exports in `Dnsapi.dll` | Advanced/native interop callers |
+| `Iphlpapi` | Static class | Dynamic access to network adapter, routing, and IP helper exports in `Iphlpapi.dll` | Advanced/native interop callers |
+| `Wlanapi` | Static class | Dynamic access to Wi-Fi management exports in `Wlanapi.dll` | Advanced/native interop callers |
 | `IWindowHandleService` | Interface | App-facing window handle operations | Application code |
 | `User32WindowHandleService` | Concrete service | `IWindowHandleService` implementation backed by `User32` | Direct construction or DI registration |
 | `WindowsShellServiceCollectionExtensions` | Static class | Dependency injection registration | Application startup/composition root |
@@ -34,8 +40,8 @@ Do not add runtime operating-system guards for normal library code. The target f
 
 Use these rules when adding features or consuming the library:
 
-1. Keep `User32`, `Gdi32`, and `Kernel32` static.
-2. Do not create broad interfaces like `IUser32`, `IGdi32`, or `IKernel32`.
+1. Keep native DLL wrappers such as `User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, and `Wlanapi` static.
+2. Do not create broad interfaces like `IUser32`, `IGdi32`, `IKernel32`, or `IWinHttp`.
 3. Add small capability-based interfaces for app-facing behavior.
 4. Prefer dependency injection for application code.
 5. Use the static wrappers directly only when you need low-level export discovery or a function that does not yet have a service abstraction.
@@ -60,7 +66,7 @@ Avoid service names that mirror DLL names:
 
 ## Static wrapper model
 
-`User32`, `Gdi32`, and `Kernel32` all follow the same pattern.
+`User32`, `Gdi32`, `Kernel32`, `Ws2_32`, `WinInet`, `WinHttp`, `Dnsapi`, `Iphlpapi`, and `Wlanapi` all follow the same pattern.
 
 Each wrapper exposes:
 
@@ -78,7 +84,7 @@ Each wrapper exposes:
 | `TryGetFunction<TDelegate>(...)` | Resolve an export and convert it to a managed delegate. |
 | `GetFunction<TDelegate>(...)` | Resolve an export to a managed delegate or throw. |
 
-The wrappers load DLLs from the Windows system directory and parse the portable executable export table so callers can discover the exports available on the current OS build.
+The wrappers load DLLs from the Windows system directory and parse the portable executable export table so callers can discover the exports available on the current OS build. The networking wrappers are intentionally low-level; prefer `System.Net`, `System.Net.Http`, and other managed APIs unless you specifically need a Windows-native export.
 
 ## Quick start with dependency injection
 
@@ -116,7 +122,7 @@ foreach (var exportName in User32.ExportNames.Take(20))
 }
 ```
 
-The same model works for `Gdi32.ExportNames` and `Kernel32.ExportNames`.
+The same model works for `Gdi32.ExportNames`, `Kernel32.ExportNames`, and the networking wrappers such as `Ws2_32.ExportNames`, `WinHttp.ExportNames`, or `Iphlpapi.ExportNames`.
 
 ### Resolve a native function pointer
 
@@ -173,6 +179,29 @@ delegate nint GetCurrentProcessDelegate();
 ```
 
 `GetCurrentProcess` returns a pseudo-handle. Do not close it.
+
+### Bind and call a networking DLL function
+
+```csharp
+using System.Runtime.InteropServices;
+using TripleG3.Windows.Shell;
+
+var wsaGetLastError = Ws2_32.GetFunction<WSAGetLastErrorDelegate>("WSAGetLastError");
+int lastWinsockError = wsaGetLastError();
+
+[UnmanagedFunctionPointer(CallingConvention.Winapi)]
+delegate int WSAGetLastErrorDelegate();
+```
+
+Use the same model for:
+
+- `WinInet` (`InternetOpenW`, `InternetReadFile`, `InternetCloseHandle`) when interactive client internet APIs are required.
+- `WinHttp` (`WinHttpOpen`, `WinHttpSendRequest`, `WinHttpCloseHandle`) for service-friendly HTTP APIs.
+- `Dnsapi` (`DnsQuery_W`, `DnsFree`, `DnsRecordListFree`) for DNS APIs.
+- `Iphlpapi` (`GetAdaptersAddresses`, `GetIfTable`, `GetIpForwardTable`) for adapter and routing APIs.
+- `Wlanapi` (`WlanOpenHandle`, `WlanEnumInterfaces`, `WlanCloseHandle`) for Wi-Fi APIs.
+
+Always follow the Windows SDK contract for initialization and cleanup. For example, Winsock APIs that require a session should be used after `WSAStartup` and paired with `WSACleanup`, and handles returned by WinInet, WinHTTP, and WLAN APIs must be closed with the matching native close function.
 
 ## Delegate binding checklist
 
@@ -241,7 +270,7 @@ dotnet test
 
 Tests are Windows-only and validate:
 
-- Export discovery for `user32.dll`, `gdi32.dll`, and `kernel32.dll`.
+- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, and `Wlanapi.dll`.
 - Named and ordinal export resolution.
 - Safe delegate binding for known stable APIs.
 - Dependency injection registration for app-facing services.
@@ -254,6 +283,13 @@ src/
     User32.cs
     Gdi32.cs
     Kernel32.cs
+    Ws2_32.cs
+    WinInet.cs
+    WinHttp.cs
+    Dnsapi.cs
+    Iphlpapi.cs
+    Wlanapi.cs
+    NativeModule.cs
     Services/
       IWindowHandleService.cs
       User32WindowHandleService.cs
