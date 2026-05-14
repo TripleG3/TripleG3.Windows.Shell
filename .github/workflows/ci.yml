@@ -1,0 +1,173 @@
+name: Build & Validate
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: 10.0.x
+  PACKAGE_ID: TripleG3.Windows.Shell
+  PACKAGE_VERSION: 0.0.0-ci.${{ github.run_number }}
+  SOLUTION_PATH: TripleG3.Windows.Shell.sln
+  PROJECT_PATH: src/TripleG3.Windows.Shell/TripleG3.Windows.Shell.csproj
+  TEST_PROJECT_PATH: src/TripleG3.Windows.Shell.Tests/TripleG3.Windows.Shell.Tests.csproj
+  ARTIFACTS_PATH: artifacts
+
+jobs:
+  build-test-pack:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore $env:SOLUTION_PATH
+
+      - name: Build release
+        run: dotnet build $env:SOLUTION_PATH -c Release --no-restore -p:Version=$env:PACKAGE_VERSION -p:PackageVersion=$env:PACKAGE_VERSION
+
+      - name: Test release
+        run: dotnet test $env:TEST_PROJECT_PATH -c Release --no-build --verbosity normal
+
+      - name: Pack
+        run: dotnet pack $env:PROJECT_PATH -c Release --no-build -o $env:ARTIFACTS_PATH -p:Version=$env:PACKAGE_VERSION -p:PackageVersion=$env:PACKAGE_VERSION
+
+      - name: Inspect package metadata
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+          $package = Get-ChildItem -Path $env:ARTIFACTS_PATH -Filter "$env:PACKAGE_ID.*.nupkg" -File | Select-Object -First 1
+          if ($null -eq $package) {
+            throw "No .nupkg was created in $env:ARTIFACTS_PATH."
+          }
+
+          $symbolPackage = Get-ChildItem -Path $env:ARTIFACTS_PATH -Filter "$env:PACKAGE_ID.*.snupkg" -File | Select-Object -First 1
+          if ($null -eq $symbolPackage) {
+            throw "No .snupkg was created in $env:ARTIFACTS_PATH."
+          }
+
+          $zip = [IO.Compression.ZipFile]::OpenRead($package.FullName)
+          try {
+            $entries = @($zip.Entries | ForEach-Object { $_.FullName })
+            foreach ($requiredEntry in @('README.md', 'LICENSE', 'lib/net10.0-windows7.0/TripleG3.Windows.Shell.dll', 'lib/net10.0-windows7.0/TripleG3.Windows.Shell.xml')) {
+              if ($entries -notcontains $requiredEntry) {
+                throw "Package is missing required entry '$requiredEntry'."
+              }
+            }
+
+            $nuspec = $zip.Entries | Where-Object { $_.FullName -like '*.nuspec' } | Select-Object -First 1
+            if ($null -eq $nuspec) {
+              throw 'Package is missing its .nuspec file.'
+            }
+
+            $reader = [IO.StreamReader]::new($nuspec.Open())
+            try {
+              $nuspecText = $reader.ReadToEnd()
+            }
+            finally {
+              $reader.Dispose()
+            }
+
+            foreach ($requiredText in @(
+              '<id>TripleG3.Windows.Shell</id>',
+              '<authors>TripleG3</authors>',
+              '<license type="expression">GPL-3.0-only</license>',
+              '<readme>README.md</readme>',
+              '<repository type="git" url="https://github.com/TripleG3/TripleG3.Windows.Shell"')) {
+              if (-not $nuspecText.Contains($requiredText)) {
+                throw "Package metadata is missing expected text: $requiredText"
+              }
+            }
+
+            if ($nuspecText.Contains('Package Description')) {
+              throw 'Package metadata still contains placeholder description text.'
+            }
+          }
+          finally {
+            $zip.Dispose()
+          }
+
+      - name: Smoke-test package consumption
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $source = (Resolve-Path $env:ARTIFACTS_PATH).Path
+          $smokeRoot = Join-Path $env:RUNNER_TEMP 'TripleG3.Windows.Shell.PackageSmoke'
+          $smokeProject = Join-Path $smokeRoot 'PackageSmoke.csproj'
+          $smokeProgram = Join-Path $smokeRoot 'Program.cs'
+          $smokeNuGetConfig = Join-Path $smokeRoot 'NuGet.config'
+
+          New-Item -ItemType Directory -Path $smokeRoot -Force | Out-Null
+
+          @"
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0-windows</TargetFramework>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+              <PackageReference Include="$env:PACKAGE_ID" Version="[$env:PACKAGE_VERSION]" />
+            </ItemGroup>
+          </Project>
+          "@ | Set-Content -Path $smokeProject -Encoding UTF8
+
+          @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="local" value="$source" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="local">
+                <package pattern="$env:PACKAGE_ID" />
+              </packageSource>
+              <packageSource key="nuget.org">
+                <package pattern="*" />
+              </packageSource>
+            </packageSourceMapping>
+          </configuration>
+          "@ | Set-Content -Path $smokeNuGetConfig -Encoding UTF8
+
+          @'
+          using Microsoft.Extensions.DependencyInjection;
+          using TripleG3.Windows.Shell;
+
+          using var provider = new ServiceCollection()
+              .AddTripleG3WindowsShell()
+              .BuildServiceProvider();
+
+          _ = provider.GetRequiredService<IWindowHandleService>();
+          _ = provider.GetRequiredService<IScreenCaptureService>();
+          '@ | Set-Content -Path $smokeProgram -Encoding UTF8
+
+          dotnet restore $smokeProject --configfile $smokeNuGetConfig
+          dotnet build $smokeProject -c Release --no-restore
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: ${{ env.ARTIFACTS_PATH }}
