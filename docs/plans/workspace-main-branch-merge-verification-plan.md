@@ -35,6 +35,7 @@ Additional observations:
 - No source-code merge is currently indicated by the audit.
 - The first pushed audit commit triggered `TripleG3.Windows.Shell`'s NuGet publish workflow. Build, test, pack, and the first package/symbol publish succeeded, but the workflow failed by attempting to push the same `.snupkg` a second time.
 - The workflow remediation removes the explicit second symbol push and keeps `--skip-duplicate` on the package push. The .NET CLI already discovers and pushes the adjacent `.snupkg` when pushing the `.nupkg`.
+- Post-remediation workflow run `14` completed successfully for commit `b8cb68d`; build, test, pack, and publish steps all passed. NuGet.org had not indexed `1.0.4` yet during version calculation, so the fixed publish step safely skipped the already-published `1.0.4` package instead of failing.
 - Plan review confirmed that deleting already-merged local branches is unnecessary and intentionally omitted; the user asked to preserve `main` as the active working branch and merge unpublished work, not to prune local branch names.
 
 ## Implementation checklist
@@ -45,9 +46,9 @@ Additional observations:
 - [x] Identify remote branches not merged into `origin/main`.
 - [x] Re-review and refine this plan before taking any merge or commit action.
 - [x] Merge pending branch work into `main` if discovered during the final audit. No merge was required; final audit found zero unmerged local or remote branches.
-- [ ] Validate every affected repository according to the validation matrix.
-- [ ] Record validation evidence in this plan.
-- [ ] Commit and push task-related changes to `main`.
+- [x] Validate every affected repository according to the validation matrix.
+- [x] Record validation evidence in this plan.
+- [x] Commit and push task-related changes to `main`.
 
 ## Acceptance criteria
 
@@ -62,7 +63,7 @@ Additional observations:
 
 | Repository | Required validation | Result/evidence |
 | --- | --- | --- |
-| `TripleG3.Windows.Shell` | `git status --short --branch`; branch merge audit; publish workflow validation because this repo changed | In progress: branch audit passed with local unmerged count `0` and remote unmerged count `0`; first publish run built/tested/packed and published `1.0.4`, then failed on duplicate `.snupkg` push; workflow fix pending validation. |
+| `TripleG3.Windows.Shell` | `git status --short --branch`; branch merge audit; publish workflow validation because this repo changed | Passed: on `main`, tracking `origin/main`; local unmerged count `0`; remote unmerged count `0`; `git diff --check` passed; publish run `14` succeeded after workflow remediation. |
 | `TripleG3.Windows.Shell.UI` | `git status --short --branch`; branch merge audit; build/test only if code merged | Passed: on `main`, tracking `origin/main`; local unmerged count `0`; remote unmerged count `0`; no tracked changes. |
 | `TripleG3.Windows.Shell.Azure` | `git status --short --branch`; branch merge audit; build/test only if code merged | Passed: on `main`, tracking `origin/main`; local unmerged count `0`; remote unmerged count `0`; no tracked changes. |
 | `TripleG3.Windows.Shell.Web` | `git status --short --branch`; branch merge audit; build/test only if code merged | Passed: on `main`, tracking `origin/main`; local unmerged count `0`; remote unmerged count `0`; no tracked changes. |
