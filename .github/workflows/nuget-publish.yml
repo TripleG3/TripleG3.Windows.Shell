@@ -116,13 +116,7 @@ jobs:
           $packages = Get-ChildItem -Path $env:ARTIFACTS_PATH -Filter *.nupkg -File
           foreach ($package in $packages) {
             Write-Host "Publishing $($package.FullName)"
-            dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json
-          }
-
-          $symbolPackages = Get-ChildItem -Path $env:ARTIFACTS_PATH -Filter *.snupkg -File
-          foreach ($symbolPackage in $symbolPackages) {
-            Write-Host "Publishing symbols $($symbolPackage.FullName)"
-            dotnet nuget push $symbolPackage.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json
+            dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
           }
 
       - name: Summary
