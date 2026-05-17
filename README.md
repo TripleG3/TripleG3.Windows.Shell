@@ -1,6 +1,6 @@
 # TripleG3.Windows.Shell
 
-`TripleG3.Windows.Shell` is a Windows-only .NET 10 library for working with core Win32 shell, windowing, graphics, process, networking, device, HID, USB, security, cryptography, SSPI, and smart card APIs from managed code.
+`TripleG3.Windows.Shell` is a Windows-only .NET 10 library for working with core Win32 shell, windowing, screen capture, graphics, process, networking, device, HID, USB, security, cryptography, SSPI, and smart card APIs from managed code.
 
 The library exposes two layers:
 
@@ -50,6 +50,11 @@ Do not add runtime operating-system guards for normal library code. The target f
 | `DbgHelp` | Static class | Dynamic access to symbol and stack walking exports in `DbgHelp.dll` | Advanced/native interop callers |
 | `IWindowHandleService` | Interface | App-facing window handle operations | Application code |
 | `User32WindowHandleService` | Concrete service | `IWindowHandleService` implementation backed by `User32` | Direct construction or DI registration |
+| `IScreenCaptureService` | Interface | App-facing screenshot capture for monitors, coordinate bounds, and windows | Application code |
+| `User32Gdi32ScreenCaptureService` | Concrete service | `IScreenCaptureService` implementation backed by `User32` and `Gdi32` | Direct construction or DI registration |
+| `ScreenCapture` | Class | Disposable screenshot result containing a `Bitmap`, source bounds, and selected monitor metadata | Application code |
+| `ScreenCaptureBounds` | Record struct | Virtual-screen capture rectangle using `X1`, `Y1`, `X2`, and `Y2` edges | Application code |
+| `ScreenCaptureMonitor` | Record | Monitor snapshot metadata including index, native handle, bounds, work area, and primary-display flag | Application code |
 | `WindowsShellServiceCollectionExtensions` | Static class | Dependency injection registration | Application startup/composition root |
 
 ## Design rules for users and AI agents
@@ -116,13 +121,66 @@ var services = new ServiceCollection()
     .BuildServiceProvider();
 
 var windows = services.GetRequiredService<IWindowHandleService>();
+var screenCapture = services.GetRequiredService<IScreenCaptureService>();
 
 nint desktopWindow = windows.GetDesktopWindow();
 nint foregroundWindow = windows.GetForegroundWindow();
 bool isForegroundWindow = foregroundWindow != nint.Zero && windows.IsWindow(foregroundWindow);
+
+using ScreenCapture desktopCapture = screenCapture.CaptureAllMonitors();
+desktopCapture.SavePng("desktop.png");
 ```
 
 Prefer this model when writing application logic because it is easy to replace, mock, and test.
+
+### Capture screens, monitors, bounds, and windows
+
+Use `IScreenCaptureService` for app-facing screenshot operations. Monitor bounds use Windows virtual-screen coordinates, so monitors positioned to the left or above the primary display can have negative `X1` or `Y1` values. `X2` and `Y2` are exclusive edges, which makes the captured size `X2 - X1` by `Y2 - Y1`.
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using TripleG3.Windows.Shell;
+
+using var provider = new ServiceCollection()
+    .AddTripleG3WindowsShell()
+    .BuildServiceProvider();
+
+var capture = provider.GetRequiredService<IScreenCaptureService>();
+
+IReadOnlyList<ScreenCaptureMonitor> monitors = capture.GetMonitors();
+
+// Capture every monitor as one virtual-desktop image.
+using ScreenCapture allMonitors = capture.CaptureAllMonitors();
+allMonitors.SavePng("all-monitors.png");
+
+// Capture one monitor by the stable index returned in this monitor snapshot.
+using ScreenCapture primaryMonitor = capture.CaptureMonitor(0);
+primaryMonitor.SavePng("primary-monitor.png");
+
+// Capture multiple selected monitors as the union of their virtual-screen bounds.
+if (monitors.Count > 1)
+{
+    using ScreenCapture selectedMonitors = capture.CaptureMonitors([0, 1]);
+    selectedMonitors.SavePng("selected-monitors.png");
+}
+
+// Capture a coordinate region using X1, Y1, X2, Y2.
+using ScreenCapture region = capture.CaptureBounds(100, 100, 900, 700);
+region.SavePng("region.png");
+
+// Capture a specific window.
+var windows = provider.GetRequiredService<IWindowHandleService>();
+nint foregroundWindow = windows.GetForegroundWindow();
+if (foregroundWindow != nint.Zero)
+{
+    using ScreenCapture window = capture.CaptureWindow(foregroundWindow);
+    window.SavePng("foreground-window.png");
+}
+```
+
+`CaptureMonitors(...)` preserves the selected monitors' virtual-desktop layout by capturing the union rectangle around them. If selected monitors are separated by a gap, the output image includes the gap exactly as Windows represents it in the virtual desktop.
+
+`CaptureWindow(...)` first attempts `PrintWindow` with full-content rendering and falls back to capturing the window's current screen bounds if the window does not render through `PrintWindow`. Windows may still block or omit protected surfaces, secure desktop content, minimized windows, DRM/video overlays, or content from apps that do not render through normal GDI/window-capture paths.
 
 ## Quick start with static wrappers
 
@@ -340,17 +398,23 @@ delegate bool IsWindowDelegate(nint windowHandle);
 
 The app-facing layer should stay focused and capability-based.
 
-The current service is `IWindowHandleService`:
+The current services are `IWindowHandleService` and `IScreenCaptureService`:
 
 ```csharp
 using TripleG3.Windows.Shell;
 
-public sealed class WindowReporter(IWindowHandleService windows)
+public sealed class WindowReporter(IWindowHandleService windows, IScreenCaptureService capture)
 {
     public bool HasForegroundWindow()
     {
         var handle = windows.GetForegroundWindow();
         return handle != nint.Zero && windows.IsWindow(handle);
+    }
+
+    public void SaveDesktopScreenshot(string filePath)
+    {
+        using var screenshot = capture.CaptureAllMonitors();
+        screenshot.SavePng(filePath);
     }
 }
 ```
@@ -358,7 +422,6 @@ public sealed class WindowReporter(IWindowHandleService windows)
 Future services should compose raw exports into safe operations. For example:
 
 - A window enumeration service can compose `EnumWindows`, `GetWindowTextW`, `GetClassNameW`, and `IsWindowVisible`.
-- A screen capture service can compose `User32` device-context calls with `Gdi32` bitmap calls.
 - A clipboard service can hide the required `OpenClipboard`/`CloseClipboard` lifetime rules.
 
 ## Error handling
@@ -383,7 +446,7 @@ Tests are Windows-only and validate:
 - Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `shell32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `Advapi32.dll`, `Crypt32.dll`, `BCrypt.dll`, `NCrypt.dll`, `Secur32.dll`, `Winscard.dll`, `SCardDlg.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, `WinUsb.dll`, `Psapi.dll`, `Pdh.dll`, `Ntdll.dll`, and `DbgHelp.dll`.
 - Named and ordinal export resolution.
 - Safe delegate binding for known stable APIs.
-- Dependency injection registration for app-facing services.
+- Screen capture model validation, PNG saving, and dependency injection registration for app-facing services.
 
 Native export validation tests that could touch Windows services, security packages, crypto providers, smart card readers, dialogs, or other machine state are marked with `Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)`. Do not enable those tests in automated runs unless the environment is intentionally prepared for native validation.
 

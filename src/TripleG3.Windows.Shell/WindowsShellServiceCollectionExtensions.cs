@@ -15,6 +15,7 @@ public static class WindowsShellServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddSingleton<IWindowHandleService, User32WindowHandleService>();
+        services.AddSingleton<IScreenCaptureService, User32Gdi32ScreenCaptureService>();
 
         return services;
     }
