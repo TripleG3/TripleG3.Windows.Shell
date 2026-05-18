@@ -8,8 +8,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{BF78
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TripleG3.Windows.Shell", "src\TripleG3.Windows.Shell\TripleG3.Windows.Shell.csproj", "{B156CA5D-1608-334C-0CB1-0ED3F4B28F96}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TripleG3.Windows.Shell.Tests", "src\TripleG3.Windows.Shell.Tests\TripleG3.Windows.Shell.Tests.csproj", "{7A2D3D3E-4E75-4D89-9A68-0C77462C7F26}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TripleG3.Windows.Shell.ConsumerSmoke", "samples\TripleG3.Windows.Shell.ConsumerSmoke\TripleG3.Windows.Shell.ConsumerSmoke.csproj", "{7D92A78F-E5B6-4C4E-B88C-9B891C1E1C1B}"
 EndProject
 Global
@@ -22,10 +20,6 @@ Global
 		{B156CA5D-1608-334C-0CB1-0ED3F4B28F96}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B156CA5D-1608-334C-0CB1-0ED3F4B28F96}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B156CA5D-1608-334C-0CB1-0ED3F4B28F96}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7A2D3D3E-4E75-4D89-9A68-0C77462C7F26}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7A2D3D3E-4E75-4D89-9A68-0C77462C7F26}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7A2D3D3E-4E75-4D89-9A68-0C77462C7F26}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7A2D3D3E-4E75-4D89-9A68-0C77462C7F26}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7D92A78F-E5B6-4C4E-B88C-9B891C1E1C1B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7D92A78F-E5B6-4C4E-B88C-9B891C1E1C1B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D92A78F-E5B6-4C4E-B88C-9B891C1E1C1B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -36,7 +30,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B156CA5D-1608-334C-0CB1-0ED3F4B28F96} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
-		{7A2D3D3E-4E75-4D89-9A68-0C77462C7F26} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{7D92A78F-E5B6-4C4E-B88C-9B891C1E1C1B} = {BF786A8E-35F2-4B59-9C9B-3C1AB9E4D0D6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution

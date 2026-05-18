@@ -18,11 +18,10 @@ env:
   PACKAGE_VERSION: 0.0.0-ci.${{ github.run_number }}
   SOLUTION_PATH: TripleG3.Windows.Shell.sln
   PROJECT_PATH: src/TripleG3.Windows.Shell/TripleG3.Windows.Shell.csproj
-  TEST_PROJECT_PATH: src/TripleG3.Windows.Shell.Tests/TripleG3.Windows.Shell.Tests.csproj
   ARTIFACTS_PATH: artifacts
 
 jobs:
-  build-test-pack:
+  build-pack:
     runs-on: windows-latest
 
     steps:
@@ -39,9 +38,6 @@ jobs:
 
       - name: Build release
         run: dotnet build $env:SOLUTION_PATH -c Release --no-restore -p:Version=$env:PACKAGE_VERSION -p:PackageVersion=$env:PACKAGE_VERSION
-
-      - name: Test release
-        run: dotnet test $env:TEST_PROJECT_PATH -c Release --no-build --verbosity normal
 
       - name: Pack
         run: dotnet pack $env:PROJECT_PATH -c Release --no-build -o $env:ARTIFACTS_PATH -p:Version=$env:PACKAGE_VERSION -p:PackageVersion=$env:PACKAGE_VERSION

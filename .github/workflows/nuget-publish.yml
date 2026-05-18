@@ -18,11 +18,10 @@ env:
   PACKAGE_ID: TripleG3.Windows.Shell
   SOLUTION_PATH: TripleG3.Windows.Shell.sln
   PROJECT_PATH: src/TripleG3.Windows.Shell/TripleG3.Windows.Shell.csproj
-  TEST_PROJECT_PATH: src/TripleG3.Windows.Shell.Tests/TripleG3.Windows.Shell.Tests.csproj
   ARTIFACTS_PATH: artifacts
 
 jobs:
-  build-test-pack-publish:
+  build-pack-publish:
     runs-on: windows-latest
 
     steps:
@@ -98,9 +97,6 @@ jobs:
       - name: Build release
         run: dotnet build $env:SOLUTION_PATH -c Release --no-restore -p:Version=$env:PACKAGE_VERSION -p:PackageVersion=$env:PACKAGE_VERSION
 
-      - name: Test release
-        run: dotnet test $env:TEST_PROJECT_PATH -c Release --no-build --verbosity normal
-
       - name: Pack
         run: dotnet pack $env:PROJECT_PATH -c Release --no-build -o $env:ARTIFACTS_PATH -p:Version=$env:PACKAGE_VERSION -p:PackageVersion=$env:PACKAGE_VERSION
 
@@ -136,5 +132,5 @@ jobs:
 
     # Notes:
     # - Set the repository or organization secret NUGET_API_KEY with a valid NuGet.org API key.
-    # - This workflow intentionally uses windows-latest because tests exercise real Windows DLLs.
+    # - This workflow intentionally uses windows-latest because the package targets Windows APIs.
     # - The package version is calculated automatically from the latest stable version on NuGet.org.

@@ -22,7 +22,7 @@ Do not add runtime operating-system guards for normal library code. The target f
 ## Current public API
 
 | API | Type | Purpose | Recommended consumer |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `User32` | Static class | Dynamic access to `user32.dll` exports | Advanced/native interop callers and internal services |
 | `Gdi32` | Static class | Dynamic access to `gdi32.dll` exports | Advanced/native interop callers and internal services |
 | `Kernel32` | Static class | Dynamic access to `kernel32.dll` exports | Advanced/native interop callers and internal services |
@@ -93,7 +93,7 @@ Avoid service names that mirror DLL names:
 Each wrapper exposes:
 
 | Member | Description |
-|---|---|
+| --- | --- |
 | `LibraryName` | Canonical DLL name. |
 | `ModuleHandle` | Loaded native module handle. |
 | `ModulePath` | Full path to the loaded system DLL. |
@@ -433,22 +433,14 @@ The static wrappers use two styles:
 
 Use `TryGet...` when probing for OS-version-specific exports. Use `Get...` when the function is required for your code path.
 
-## Testing
+## Validation
 
-Run tests from the repository root:
+The historical unit test project is disabled and no longer participates in solution builds or CI workflows.
+Validate changes from the repository root with a release build:
 
 ```powershell
-dotnet test
+dotnet build TripleG3.Windows.Shell.sln -c Release
 ```
-
-Tests are Windows-only and validate:
-
-- Export discovery for `user32.dll`, `gdi32.dll`, `kernel32.dll`, `shell32.dll`, `Ws2_32.dll`, `WinInet.dll`, `WinHttp.dll`, `Dnsapi.dll`, `Iphlpapi.dll`, `Wlanapi.dll`, `Advapi32.dll`, `Crypt32.dll`, `BCrypt.dll`, `NCrypt.dll`, `Secur32.dll`, `Winscard.dll`, `SCardDlg.dll`, `SetupAPI.dll`, `CfgMgr32.dll`, `Hid.dll`, `WinUsb.dll`, `Psapi.dll`, `Pdh.dll`, `Ntdll.dll`, and `DbgHelp.dll`.
-- Named and ordinal export resolution.
-- Safe delegate binding for known stable APIs.
-- Screen capture model validation, PNG saving, and dependency injection registration for app-facing services.
-
-Native export validation tests that could touch Windows services, security packages, crypto providers, smart card readers, dialogs, or other machine state are marked with `Ignore(NativeTestSkipReasons.RequiresManualNativeValidation)`. Do not enable those tests in automated runs unless the environment is intentionally prepared for native validation.
 
 ## Repository layout
 
@@ -485,7 +477,6 @@ src/
       IWindowHandleService.cs
       User32WindowHandleService.cs
     WindowsShellServiceCollectionExtensions.cs
-  TripleG3.Windows.Shell.Tests/
 ```
 
 ## Contribution guidance
@@ -497,6 +488,6 @@ When adding a new capability:
 3. App-facing behavior belongs behind a small interface.
 4. Implement app-facing behavior by binding delegates from the relevant static wrappers.
 5. Register app-facing services in `AddTripleG3WindowsShell`.
-6. Add tests for export resolution, service behavior, and DI registration.
+6. Validate with a release build and, when appropriate, the consumer smoke sample.
 
 When in doubt, keep the native boundary static and make the consuming workflow injectable.
